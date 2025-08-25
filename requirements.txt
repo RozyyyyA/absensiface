@@ -1,0 +1,23 @@
+# FastAPI & Server
+fastapi
+uvicorn[standard]
+
+# Auth
+python-jose[cryptography]
+passlib[bcrypt]
+
+# Database
+SQLAlchemy>=2.0
+psycopg2-binary
+
+# ML / CV
+numpy
+opencv-python
+scikit-learn
+scikit-image
+ultralytics
+joblib
+
+# Uploads & PDF
+python-multipart
+reportlab
