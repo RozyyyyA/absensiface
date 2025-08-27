@@ -86,6 +86,7 @@ class Session(Base):
 
     course = relationship("Course", back_populates="sessions")
     attendances = relationship("Attendance", back_populates="session")
+    reports = relationship("Report", back_populates="session")
 
 # =========================
 # Absensi
@@ -101,7 +102,7 @@ class Attendance(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     session = relationship("Session", back_populates="attendances")
-    student = relationship("Student")
+    student = relationship("Student", back_populates="attendances")
     # course = relationship("Course", back_populates="attendances", viewonly=True)
 
 # =========================
@@ -111,9 +112,10 @@ class Report(Base):
     __tablename__ = "reports"
 
     id = Column(Integer, primary_key=True, index=True)
-    course_id = Column(Integer, ForeignKey("courses.id"))
-    meeting_no = Column(Integer)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False) 
     started_at = Column(DateTime, default=datetime.utcnow)
+    finished_at = Column(DateTime, nullable=True)
 
     total_students = Column(Integer, default=0)
     hadir_count = Column(Integer, default=0)
@@ -121,3 +123,8 @@ class Report(Base):
     tanpa_keterangan_count = Column(Integer, default=0)
 
     course = relationship("Course", back_populates="reports")
+    session = relationship("Session", back_populates="reports")
+
+
+
+

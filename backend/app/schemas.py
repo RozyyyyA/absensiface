@@ -133,12 +133,11 @@ class SessionResponse(SessionBase):
 # =========================
 # Enrollment Schemas
 # =========================
-class EnrollmentCreate(BaseModel):
+class EnrollmentCreateMultiple(BaseModel):
     course_id: int
-    student_id: int
+    student_ids: List[int]
 
 class EnrollmentResponse(BaseModel):
-    id: int
     course_id: int
     student_id: int
 
