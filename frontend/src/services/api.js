@@ -1,30 +1,91 @@
-// src/services/api.js
 import axios from "axios";
 
-const API_URL = "http://localhost:8000"; // ganti sesuai backend FastAPI kamu
-
-const api = axios.create({
-  baseURL: API_URL,
+const API = axios.create({
+  baseURL: "http://127.0.0.1:8000", // sesuaikan dengan backend FastAPI-mu
 });
 
-// Tambahkan Authorization header jika ada token
-api.interceptors.request.use((config) => {
+API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// fungsi login
-export const loginUser = async (email, password) => {
-  try {
-    const res = await api.post("/auth/login", { email, password });
-    return res.data;
-  } catch (err) {
-    throw err.response?.data || { detail: "Login gagal" };
-  }
+// -------- AUTH --------
+export const loginUser = (email, password) =>
+  API.post("/auth/login", { email, password });
+
+// ---- COURSES ----
+export const getCourses = () => API.get("/courses/");
+
+export const getCourseById = (id) => API.get(`/courses/${id}`);
+
+//--- ENROLLMENT ---
+export const getEnrollments = (courseId) =>
+  API.get(`/enrollments/${courseId}`);
+
+export const enrollStudents = async (courseId, studentIds) => {
+  const res = await fetch("http://localhost:8000/enrollments/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${localStorage.getItem("token")}`
+    },
+    body: JSON.stringify({
+      course_id: Number(courseId),        // ubah ke int
+      student_ids: studentIds.map(Number) // pastikan array of int
+    })
+  });
+  if (!res.ok) throw new Error("Failed to enroll");
+  return res.json();
 };
 
+// -------- STUDENT --------
+export const getStudents = () => API.get("/student/");
+export const createStudent = (data) => API.post("/student/", data);
+export const updateStudent = (id, data) => API.put(`/student/${id}`, data);
+export const deleteStudent = (id) => API.delete(`/student/${id}`);
 
-export default api;
+// -------- SESSION --------
+export const getSessions = () => API.get("/session/");
+export const createSession = (payload) => API.post("/session/", payload); // {course_id, meeting_no}
+export const finishSession = (sessionId) => API.post(`/session/${sessionId}/finish`);
+
+
+// -------- ATTENDANCE --------
+export const markFace = ({ file, course_id, meeting_no }) => {
+  const form = new FormData();
+  form.append("file", file);
+  // course_id & meeting_no sebagai query params (sesuai FastAPI-mu)
+  return API.post(`/attendance/mark/face?course_id=${course_id}&meeting_no=${meeting_no}`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
+export const markManual = ({ student_id, course_id, meeting_no, status }) =>
+  API.post("/attendance/mark/manual", { student_id, course_id, meeting_no, status });
+
+// get attendance list per session (if implemented)
+export const getAttendance = (session_id) =>
+  API.get("/attendance/", { params: { session_id } });
+
+// update attendance by id (if implemented)
+export const updateAttendance = (attendance_id, payload) =>
+  API.put(`/attendance/${attendance_id}`, payload);
+
+// -------- REPORT --------
+export const getReportBySession = (sessionId) => API.get(`/report/${sessionId}`);
+export async function downloadReportPdf(sessionId) {
+  try {
+    const res = await fetch(`/report/pdf/${sessionId}`, {
+      method: "GET",
+    });
+    if (!res.ok) throw new Error("Gagal download PDF");
+    const blob = await res.blob();
+    return blob;
+  } catch (error) {
+    console.error("downloadReportPdf error:", error);
+    throw error;
+  }
+}
+
+export default API;

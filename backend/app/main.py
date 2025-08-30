@@ -20,13 +20,13 @@ app = FastAPI(
 # Middleware CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
+# Include router
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(courses.router, prefix="/courses", tags=["Courses"])
 app.include_router(enrollments.router, prefix="/enrollments", tags=["Enrollments"])
@@ -34,6 +34,7 @@ app.include_router(session.router, prefix="/session", tags=["Session"])
 app.include_router(student.router, prefix="/student", tags=["Student"])
 app.include_router(attendance.router, prefix="/attendance", tags=["Attendance"])
 app.include_router(report.router, prefix="/report", tags=["Report"])
+
 
 # Custom schema untuk JWT di Swagger
 def custom_openapi():

@@ -5,7 +5,7 @@ from ..database import get_db
 from .. import models, schemas
 from ..security import create_access_token, hash_password, verify_password
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter(tags=["Auth"])
 
 @router.post("/register", response_model=schemas.Token)
 def register_lecturer(
@@ -46,4 +46,10 @@ def login(
         )
 
     token = create_access_token({"sub": str(lec.id)})
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "id": lec.id,
+        "name": lec.name,
+        "email": lec.email,
+    }

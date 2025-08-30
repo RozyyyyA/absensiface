@@ -7,7 +7,7 @@ from ..database import get_db
 from .. import models, schemas
 from ..schemas import CourseBase, CourseCreate, CourseUpdate  # import dari app/schemas.py
 
-router = APIRouter(prefix="/courses", tags=["Courses"])
+router = APIRouter(tags=["Courses"])
 
 # GET semua courses
 @router.get("/", response_model=List[CourseBase])

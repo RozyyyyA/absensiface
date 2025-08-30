@@ -18,6 +18,9 @@ class LecturerLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    id: int
+    name: str
+    email: str
 
 # ----------------------
 # Students
@@ -88,6 +91,9 @@ class AttendanceRecord(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AttendanceUpdate(BaseModel):
+    status: AttendanceStatus
 
 # ----------------------
 # Report

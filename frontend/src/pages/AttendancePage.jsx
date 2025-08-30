@@ -1,65 +1,92 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
-import api from "../services/api";
+import { getSessions, postAttendance } from "../services/api";
 
 export default function AttendancePage() {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const webcamRef = useRef(null);
+  const [sessions, setSessions] = useState([]);
+  const [sessionId, setSessionId] = useState("");
+  const [status, setStatus] = useState("");
 
-  const course_id = 1; // contoh fix, bisa dari props/URL
-  const meeting_no = 1;
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await getSessions();
+        setSessions(data || []);
+        if (data?.length) setSessionId(String(data[0].id ?? data[0]._id ?? data[0].session_id));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
 
-  const captureAndSend = async (webcamRef) => {
+  const captureAndSend = async () => {
     if (!webcamRef.current) return;
     const imageSrc = webcamRef.current.getScreenshot();
-    const blob = await fetch(imageSrc).then((res) => res.blob());
-    const formData = new FormData();
-    formData.append("file", blob, "frame.jpg");
-
+    if (!imageSrc) return;
+    // convert base64 to Blob
+    const res = await fetch(imageSrc);
+    const blob = await res.blob();
+    const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
     try {
-      setLoading(true);
-      const res = await api.post(
-        `/attendance/mark/face?course_id=${course_id}&meeting_no=${meeting_no}`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      setLogs((prev) => [
-        ...prev,
-        `✔️ Student ${res.data.student_id} hadir (conf: ${res.data.confidence})`,
-      ]);
-    } catch (err) {
-      setLogs((prev) => [...prev, `❌ ${err.response?.data?.detail}`]);
-    } finally {
-      setLoading(false);
+      setStatus("Mengirim...");
+      await postAttendance(file, sessionId);
+      setStatus("✅ Absensi berhasil dikirim");
+    } catch (e) {
+      setStatus("❌ Gagal mengirim absensi");
     }
   };
 
-  const webcamRef = React.useRef(null);
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setStatus("Mengirim...");
+      await postAttendance(file, sessionId);
+      setStatus("✅ Absensi berhasil dikirim");
+    } catch (e) {
+      setStatus("❌ Gagal mengirim absensi");
+    }
+  };
 
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-bold mb-4">Absensi Wajah</h2>
-      <Webcam
-        audio={false}
-        ref={webcamRef}
-        screenshotFormat="image/jpeg"
-        className="border rounded"
-      />
-      <div className="mt-4 space-x-2">
-        <button
-          onClick={() => captureAndSend(webcamRef)}
-          className="bg-green-600 text-white px-4 py-2 rounded"
-          disabled={loading}
+    <div className="grid gap-6 md:grid-cols-2">
+      <div className="space-y-4">
+        <label className="block text-sm text-gray-700">Pilih Sesi</label>
+        <select
+          value={sessionId}
+          onChange={(e) => setSessionId(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2"
         >
-          {loading ? "Memproses..." : "Ambil & Kirim Frame"}
-        </button>
-      </div>
-      <div className="mt-6 bg-gray-100 p-4 rounded">
-        <h3 className="font-bold">Log Absensi:</h3>
-        <ul className="list-disc ml-6">
-          {logs.map((l, i) => (
-            <li key={i}>{l}</li>
+          {sessions.map((s) => (
+            <option key={s.id ?? s.session_id} value={s.id ?? s.session_id}>
+              {s.title ?? s.nama ?? `Sesi ${s.id}`}
+            </option>
           ))}
+        </select>
+
+        <div className="rounded-lg overflow-hidden border bg-black/5 aspect-video">
+          <Webcam ref={webcamRef} screenshotFormat="image/jpeg" className="w-full h-full object-cover" />
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={captureAndSend} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">
+            Capture & Kirim
+          </button>
+          <label className="px-4 py-2 bg-gray-100 rounded-lg cursor-pointer">
+            Upload Foto
+            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          </label>
+        </div>
+
+        {status && <p className="text-sm text-gray-700">{status}</p>}
+      </div>
+
+      <div className="p-4 border rounded-lg bg-white">
+        <h3 className="font-semibold mb-2">Tips</h3>
+        <ul className="list-disc ml-5 text-sm text-gray-600 space-y-1">
+          <li>Pencahayaan cukup dan wajah menghadap kamera.</li>
+          <li>Jika gagal, coba ulangi capture atau upload dari galeri.</li>
         </ul>
       </div>
     </div>

@@ -1,13 +1,13 @@
+from ast import List
 from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.orm import Session
 from .. import models, schemas, database
 from ..security import get_current_lecturer
 from datetime import datetime
+from typing import List
 
-router = APIRouter(
-    prefix="/Session",
-    tags=["Session"]
-)
+# session.py
+router = APIRouter(tags=["Session"])
 
 @router.post("/", response_model=schemas.SessionResponse)
 def create_session(
@@ -56,3 +56,8 @@ def finish_session(
         "session_id": db_session.id,
         "finished_at": db_session.finished_at
     }
+
+@router.get("/", response_model=List[schemas.SessionResponse])
+def list_sessions(db: Session = Depends(database.get_db)):
+    return db.query(models.Session).all()
+

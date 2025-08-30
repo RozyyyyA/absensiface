@@ -6,10 +6,7 @@ from .. import crud, models, schemas
 from ..database import get_db
 from ..security import get_current_lecturer
 
-router = APIRouter(
-    prefix="/enrollments",
-    tags=["Enrollments"]
-)
+router = APIRouter(tags=["Enrollments"])
 
 @router.post("/", response_model=List[schemas.EnrollmentResponse])
 def enroll_students(

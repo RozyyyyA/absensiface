@@ -3,10 +3,7 @@ from sqlalchemy.orm import Session
 from .. import crud, schemas
 from ..database import get_db
 
-router = APIRouter(
-    prefix="/student",
-    tags=["Student"]
-)
+router = APIRouter(tags=["Student"])
 
 # ✅ Create student
 @router.post("/", response_model=schemas.StudentBase, status_code=status.HTTP_201_CREATED)

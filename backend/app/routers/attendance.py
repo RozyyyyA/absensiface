@@ -4,16 +4,13 @@ from datetime import datetime
 import numpy as np
 import cv2
 
-from .. import models, schemas
+from .. import models, schemas, database
 from ..database import get_db
 from ..security import get_current_lecturer
 from ..face_recognition import recognize_bgr  # fungsi deteksi wajahmu
 
 # Router dengan dependency global: gembok otomatis di Swagger
-router = APIRouter(
-    prefix="/attendance",
-    tags=["Attendance"],
-)
+router = APIRouter(tags=["Attendance"])
 
 # ---------------------------
 # Helper functions
@@ -205,6 +202,40 @@ def mark_attendance_manual(
     return schemas.AttendanceRecord(
         student_id=att.student_id,
         student_name=student.name,
+        status=att.status.value,
+        timestamp=att.timestamp
+    )
+
+# ---------------------------
+# 3) Update attendance
+# ---------------------------
+@router.put("/{attendance_id}", response_model=schemas.AttendanceRecord)
+def update_attendance(
+    attendance_id: int,
+    payload: schemas.AttendanceUpdate,
+    db: Session = Depends(get_db),
+    lecturer: models.Lecturer = Security(get_current_lecturer)
+):
+    att = db.get(models.Attendance, attendance_id)
+    if not att:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+
+    # pastikan lecturer punya hak di course
+    session = db.get(models.Session, att.session_id)
+    _ = _ensure_course_owned(db, session.course_id, lecturer.id)
+
+    att.status = payload.status
+    att.timestamp = datetime.utcnow()
+    db.commit()
+    db.refresh(att)
+
+    # update report
+    _recount_report(db, session.id)
+
+    student = db.get(models.Student, att.student_id)
+    return schemas.AttendanceRecord(
+        student_id=att.student_id,
+        student_name=student.name if student else "-",
         status=att.status.value,
         timestamp=att.timestamp
     )
