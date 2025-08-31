@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.orm import Session
 from datetime import datetime
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from .. import models, schemas, database
 from ..database import get_db
 from ..security import get_current_lecturer
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
-import os
+from io import BytesIO
 
 router = APIRouter(tags=["Report"])
 
@@ -102,22 +102,22 @@ def get_report_pdf(session_id: int, db: Session = Depends(database.get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    attendance_records = db.query(models.Attendance).filter(models.Attendance.session_id == session_id).all()
+    attendance_records = db.query(models.Attendance).filter(
+        models.Attendance.session_id == session_id
+    ).all()
 
-    filename = f"report_session_{session_id}.pdf"
-    reports_dir = "reports"
-    os.makedirs(reports_dir, exist_ok=True)
-    filepath = os.path.join(reports_dir, filename)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
 
-    doc = SimpleDocTemplate(filepath, pagesize=A4)
     elements = []
     styles = getSampleStyleSheet()
     elements.append(Paragraph(f"Laporan Absensi - Session {session_id}", styles["Title"]))
+    elements.append(Spacer(1, 12))
 
     data = [["NIM", "Nama", "Status"]]
     for record in attendance_records:
         student = db.query(models.Student).filter(models.Student.id == record.student_id).first()
-        status_str = record.status.value if hasattr(record.status, "value") else str(record.status)
+        status_str = getattr(record.status, "value", str(record.status))
         data.append([student.nim, student.name, status_str])
 
     table = Table(data, colWidths=[100, 200, 100])
@@ -125,12 +125,17 @@ def get_report_pdf(session_id: int, db: Session = Depends(database.get_db)):
         ("BACKGROUND", (0,0), (-1,0), colors.grey),
         ("TEXTCOLOR", (0,0), (-1,0), colors.whitesmoke),
         ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
         ("GRID", (0,0), (-1,-1), 1, colors.black),
+        ("BOTTOMPADDING", (0,0), (-1,0), 8),
     ]))
     elements.append(table)
 
-    doc.build(elements)  # ✅ Pastikan build selesai
+    doc.build(elements)
+    buffer.seek(0)  # reset ke awal stream
 
-    abs_path = os.path.abspath(filepath)
-    return FileResponse(abs_path, filename=filename, media_type="application/pdf")
-
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=report_session_{session_id}.pdf"}
+    )

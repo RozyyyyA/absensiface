@@ -74,18 +74,11 @@ export const updateAttendance = (attendance_id, payload) =>
 
 // -------- REPORT --------
 export const getReportBySession = (sessionId) => API.get(`/report/${sessionId}`);
-export async function downloadReportPdf(sessionId) {
-  try {
-    const res = await fetch(`/report/pdf/${sessionId}`, {
-      method: "GET",
-    });
-    if (!res.ok) throw new Error("Gagal download PDF");
-    const blob = await res.blob();
-    return blob;
-  } catch (error) {
-    console.error("downloadReportPdf error:", error);
-    throw error;
-  }
-}
+export const downloadReportPdf = async (sessionId) => {
+  const res = await API.get(`/report/${sessionId}/pdf`, {
+    responseType: "blob", // wajib supaya hasilnya blob
+  });
+  return res.data; // <-- balikin blob
+};
 
 export default API;
